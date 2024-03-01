@@ -17,6 +17,7 @@ const query = require('./db/postquery')
 const comment = require('./db/addcomment');
 const removedSpecified = require('./db/removeSpecified');
 const check_plag = require('./db/check_plag');
+const ENV = require('dotenv').config();
 
 Connection.open();
 

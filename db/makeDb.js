@@ -1,4 +1,5 @@
 const MongoClient = require('mongodb').MongoClient
+const ENV = require('dotenv').config();
 
 class Connection {
 
@@ -11,7 +12,7 @@ class Connection {
 }
 
 Connection.db = null
-Connection.url = 'mongodb://localhost:27017'
+Connection.url = process.env.CONNECTION_URL
 Connection.options = {
     useNewUrlParser:    true,
     useUnifiedTopology: true,
