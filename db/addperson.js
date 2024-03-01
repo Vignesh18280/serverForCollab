@@ -8,9 +8,9 @@ const userSchema = mongoose.Schema({
     pass: {type: String, required: true},
     org: {type: String, required: true},
     rollno: {type: String, required: true},
-    picture_prof: {type: Buffer, required: false},
-    projects: {type: Array, required: false},
-    skills: {type: Array, required: false},
+    picture_prof: {type: String, required: false},
+    projects: [],
+    skills: [],
     bio: {type: String, required: false},
 })
 

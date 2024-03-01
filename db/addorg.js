@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const orgSchema = mongoose.Schema({
+const orgSchema = new mongoose.Schema({
     id_o: String,
     name: String,
     email: String,
@@ -10,7 +10,7 @@ const orgSchema = mongoose.Schema({
     hackathons_p: Array,
     hackathons_w: Array,
     ranking: Number,
-    picture: Buffer,
+    picture: String,
     description: String,
     wlist_p: Array,
     wlist_u: Array
