@@ -21,7 +21,7 @@ const ENV = require('dotenv').config();
 const cloudinary = require("./MiddleWares/cloudinary");
 const upload = require("./MiddleWares/Multerrr")
 
-Connection.open();
+//Connection.open();
 
 const app = express();
 app.use(cors());
@@ -552,4 +552,10 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
 app.listen(5050, () =>{ 
     console.log('Example app is listening on port 5050.')
 });
+
+mongoose.connect(process.env.CONNECTION_URL, {useNewUrlParser: true, useUnifiedTopology: true})
+    .then(() => {
+        console.log("Hello the databse has been connected")
+    })
+    .catch(error => console.log(error));
 
