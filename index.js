@@ -30,6 +30,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.get('/', (req, res) => {
 
@@ -78,7 +79,7 @@ app.post('/register', async(req, res) => {
             res.status(409).send('Conflict');
         }else {
             // await Connection.db.db('collab').collection('login-credentials').insertOne({email: req.body.email, pass: req.body.password});
-            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
+            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {students: id_string}});
             //await Connection.db.db('collab').collection('users-coll').updateOne({email: req.body.email}, {$set: {id_p: id_string}});
             res.status(200).send('OK');
@@ -92,23 +93,23 @@ app.post('/orgregister', upload.any() , async(req, res) => {
     try{
         const id_array = await org.find({});
         const teller = id_checker(id_array, req.body.id_o);
-        const files = req.files;
+        const files = req.files
+        console.log(files);
         if(teller === false) {
             res.status(409).send('Conflict');
         }
         else {
             const images = [];
-            const uploadImages = files.map((file) => {
-                return new Promise((resolve, reject) => {
-                    cloudinary.uploader.upload(file.path, (result) => {
-                        images.push(result.secure_url);
-                        resolve();
-                    })
-                })
-            })
-            await Promise.all(uploadImages);
+            const uploadImages = async () => {
+              for (const file of files) {
+                const result = await cloudinary.uploader.upload(file.path);
+                images.push(result.secure_url);
+              }
+            };
+      
+            await uploadImages();
+            console.log(images);
             const NEW_ORG = new org({
-                _id: new mongoose.Types.ObjectId(),
                 id_o: req.body.id_o.toUpperCase(),
                 name: req.body.name,
                 email: req.body.email,
@@ -122,6 +123,7 @@ app.post('/orgregister', upload.any() , async(req, res) => {
                 wlist_p: [],
                 wlist_u: []
             })
+            console.log(NEW_ORG)
             await NEW_ORG.save();
             const CRED = new loginCred({email: req.body.email, password: req.body.password, tt: "org"});
             await CRED.save();
@@ -130,6 +132,70 @@ app.post('/orgregister', upload.any() , async(req, res) => {
     }catch(err) {
         console.log(err);
         res.status(500).send('Internal server error');
+    }
+})
+
+
+app.get('/organization/:orgId', async(req, res) => {
+    try{
+        const {orgId} = req.params;
+        const org = await org.findOne({id_o: orgId});
+        return res.status(200).json(org);
+
+    }
+    catch(err){
+        console.log(err);
+        return res.status(400).json("Not Found");
+    }
+})
+
+app.patch('/organization/:orgId' , async(req, res)=> {
+    try{
+        const {orgId} = req.params;
+        const orgs = await org.findOne({id_o: orgId});
+        const desc = req.body.description.length != 0 ? req.body.description : orgs.description; 
+        const new_org = await org.updateOne({id_o: orgId}, {$set: {description : desc}});
+        if(req.body.projects.length != 0){
+            await org.findOneAndUpdate(
+                {id_o: orgId},
+                {
+                    $push : {
+                        projects : req.body.projects
+                    }
+                },
+                {
+                    new : true
+                })
+        }
+        if(req.body.hackathons_p.length != 0){
+            await org.findOneAndUpdate(
+                {id_o: orgId},
+                {
+                    $push : {
+                        hackathons_p : req.body.hackathons_p
+                    }
+                },
+                {
+                    new : true
+                })
+        }
+        if(req.body.hackathons_w.length != 0){
+            await org.updateOne(
+                {id_o: orgId},
+                {
+                    $push : {
+                        hackathons_w : req.body.hackathons_w
+                    }
+                },
+                {
+                    new : true
+                })
+        }
+        return res.status(200).json(new_org);
+    }
+    catch(err){
+        console.log(err);
+        return res.status(400).json("cant Upload")
     }
 })
 
