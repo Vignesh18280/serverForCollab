@@ -21,4 +21,5 @@ const projSchema = mongoose.Schema({
     slack: String
 })
 
-module.exports = mongoose.model('addproj', projSchema);
+const addproj = mongoose.model('addproj', projSchema);
+module.exports = {addproj}

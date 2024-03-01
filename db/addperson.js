@@ -14,4 +14,6 @@ const userSchema = mongoose.Schema({
     bio: {type: String, required: false},
 })
 
-module.exports = mongoose.model('user', userSchema);
+const user = mongoose.model('user', userSchema);
+
+module.exports = {user};

@@ -15,4 +15,6 @@ const postSchema = mongoose.Schema({
     comments: Array
 });
 
-module.exports = mongoose.model('query', postSchema);
+const query = mongoose.model('query', postSchema);
+
+module.exports = {query}
