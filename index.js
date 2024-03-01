@@ -23,6 +23,7 @@ const upload = require("./MiddleWares/Multerrr")
 const {loginCred} = require('./db/loginCreds');
 const {foll} = require("./db/Followers.js");
 const { promiseHooks } = require('v8');
+const {waitinguser} = require('./db/WaitingList');
 
 
 const app = express();
@@ -46,16 +47,14 @@ app.post('/login', async(req, res) => {
         try{
             const user1 = await loginCred.findOne({email: email});
             console.log(user1)
-            if(user1 === null) {
-                return res.status(404).json("Not Found")
-            }
-            else {
-                if(user1.password === password) {
-                    //const user2 = await user.findOne({email: email});
-                    res.status(200).json(user1);
-                    //res.status(200).send('OK');
-                }
-                else {
+            if (user1 === null) {
+                return res.status(404).json("Not Found");
+            } else {
+                if (user1.password === password) {
+                    const user2 = await user.findOne({ email: email });
+                    const sendd = { ...user2, tt: user1.tt };
+                    return res.status(200).json(sendd);
+                } else {
                     res.status(401).send('Unauthorized');
                 }
             }
@@ -78,13 +77,27 @@ app.post('/register', async(req, res) => {
         else if(await user.findOne({id_p: id_string}) !== null) {
             res.status(409).send('Conflict');
         }else {
+            if(await waitinguser.findOne({id_w: id_string}) !== null) {
+                return res.status(409).send('Conflict');
+            }
+            const wait = new waitinguser({
+                id_w: id_string,
+                email: req.body.email,
+                name: req.body.name,
+                org: req.body.org,
+                rollno: req.body.rollno,
+                pass: req.body.password,
+                approve: false
+            });
+            await wait.save();
             // await Connection.db.db('collab').collection('login-credentials').insertOne({email: req.body.email, pass: req.body.password});
-            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
+            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {students: id_string}});
             //await Connection.db.db('collab').collection('users-coll').updateOne({email: req.body.email}, {$set: {id_p: id_string}});
             res.status(200).send('OK');
         }
     }catch(err){
+        console.log(err)
         res.status(500).send('Internal server error');
     }
 })
@@ -203,17 +216,18 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
     try{
         const approve = true;
         const get_org = await org.findOne({id_o: req.params.orgId});
+        console.log(get_org.wlist_u);
+        console.log(req.params.userId);
         if(approve === true) {
             let get;
             for(let i = 0; i < get_org.wlist_u.length; i++) {
-                if(get_org.wlist_u[i].id === req.params.userId) {
+                if(get_org.wlist_u[i].id_w === req.params.userId) {
                     get = i;
                     break;
                 }
             }
             const NEW_USER = new user({
-                _id: new mongoose.Types.ObjectId(),
-                id_p: get_org.wlist_u[get].id,
+                id_p: get_org.wlist_u[get].id_w,
                 email: get_org.wlist_u[get].email,
                 name: get_org.wlist_u[get].name,
                 pass: get_org.wlist_u[get].pass,
@@ -221,15 +235,17 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
                 rollno: get_org.wlist_u[get].rollno,
             })
             await NEW_USER.save();
-            await Connection.db.db('collab').collection('followers').insertOne({
-                id_f: get_org.wlist_u[get].id,
+            const newfoll = new foll({
+                id_f: get_org.wlist_u[get].id_w,
                 followers: [],
                 following: []
-            })
-            const CRED = new loginCred({email: get_org.wlist_u[get].email, pass: get_org.wlist_u[get].pass});
+            });
+            await newfoll.save();
+            const CRED = new loginCred({email: get_org.wlist_u[get].email, password: get_org.wlist_u[get].pass, tt: "user"});
             await CRED.save();
-            const org = await org.findOne({id_o: req.params.orgId});
-            const new_Wlist_u = removedSpecified(req.params.userId, org.wlist_u);
+            const org1 = await org.findOne({id_o: req.params.orgId});
+            await waitinguser.deleteOne({id_w: req.params.userId});
+            const new_Wlist_u = removedSpecified(req.params.userId, org1.wlist_u);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id, name: get_org.wlist_u[get].name}}});
@@ -382,15 +398,10 @@ app.post('/user/:userId/postquery', async(req, res) => {
         const blog_id = org+ '@' + rollno + '@' + Math.random() * 1000000;
         //we have to use multer for storing the image 
         const NEW_QUERY = new query({
-            _id: new mongoose.Types.ObjectId(),
             query_id: blog_id,
             title: req.body.title,
             description: req.body.description,
-            // picture: {
-            //     data: fs.readFileSync(path.join(__dirname + '/uploads/' + req.body.picture)),
-            //     contentType: 'image/png'
-            // }
-            commetns: []
+            comments: []
         });
         //await Connection.db.db('collab').collection('queries').insertOne(NEW_QUERY);
         await NEW_QUERY.save();
@@ -404,11 +415,11 @@ app.post('/user/:userId/postquery', async(req, res) => {
 
 app.get('/forum', async(req, res) => {
     try{
-        const queries = await query.find({}).toArray();
-        res.status(200).send(queries);
+        const queries = await query.find({});
+        res.status(200).json(queries);
     }catch(err) {
         console.log(err);
-        res.status(500).send('Internal server error');
+        res.status(500).json('Internal server error');
     }
 });
 
@@ -461,25 +472,6 @@ app.post('/user/:userId/addproj', async(req, res) => {
         const proj_count = user.length + 1;
         const id_c = org + '@' + rollno;
         const id_p = org + '@' + rollno + '@' + proj_count;
-        // const NEW_PROJ = new addproj({
-        //     _id: new mongoose.Types.ObjectId(),
-        //     id_p: id_p,
-        //     title: req.body.title,
-        //     statement: req.body.statement,
-        //     description: req.body.description,
-        //     org: org,
-        //     contributors: req.body.contributors,
-        //     tech: req.body.tech,
-        //     picture: req.body.picture,
-        //     architecture_diagram: req.body.architecture_diagram,
-        //     architecture_description: req.body.architecture_description,
-        //     sponsors: [],
-        //     video_url: req.body.video_url,
-        //     insta: req.body.insta,
-        //     twitter: req.body.twitter,
-        //     github: req.body.github,
-        //     slack: req.body.slack
-        // });
         const projects = await addproj.find({}).toArray();
         const result = check_plag({title: req.body.title, desc: req.body.description}, projects);
         if(!result) {
@@ -499,8 +491,8 @@ app.post('/user/:userId/addproj', async(req, res) => {
 
 app.get('/org/:orgId/wlistp', async(req, res) => {
     try{
-        const org = await org.findOne({id_o: req.params.orgId});
-        res.status(200).send(org.wlist_p);
+        const org1 = await org.findOne({id_o: req.params.orgId});
+        res.status(200).send(org1.wlist_p);
     }catch(err) {
         console.log(err);
         res.status(500).send('Internal server error');
@@ -509,8 +501,9 @@ app.get('/org/:orgId/wlistp', async(req, res) => {
 
 app.get('/org/:orgId/wlistu', async(req, res) => {
     try{
-        const org = await org.findOne({id_o: req.params.orgId});
-        res.status(200).send(org.wlist_u);
+       //console.log(req.params.orgId)
+        const org1 = await org.findOne({id_o: req.params.orgId});
+        res.status(200).json(org1.wlist_u);
     }catch(err) {
         console.log(err);
         res.status(500).send('Internal server error');
@@ -519,12 +512,12 @@ app.get('/org/:orgId/wlistu', async(req, res) => {
 
 app.get('/GetFreelance', async(req, res) => {
     try{
-        const work_posts = await freelance.find({}).toArray();
+        const work_posts = await freelance.find({});
         if(work_posts === null) {
             res.status(404).send('Not found');
         }
         else {
-            res.status(200).send(work_posts);
+            res.status(200).json(work_posts);
         }
     }catch(err) {
         res.status(500).send('Internal server error');
@@ -534,8 +527,10 @@ app.get('/GetFreelance', async(req, res) => {
 app.get('/GetFreelance/DetaulFree/:id', async(req, res) => {
     try {
         const id = req.params.id;
-        const details = await freelance.findOne({id: id});
-        res.status(200).send(details);
+        //console.log(id)
+        const details = await freelance.findOne({_id: id});
+        //console.log(details)
+        res.status(200).json(details);
     }
     catch{
         res.status(500).send('Internal server error');
@@ -545,14 +540,15 @@ app.get('/GetFreelance/DetaulFree/:id', async(req, res) => {
 app.get('/user/:userId', async(req, res) => {
     const userId = req.params.userId;
     try{
-        const user = await user.findOne({id_p: userId});
-        if(user === null) {
-            res.status(404).send('Not found');
+        const user1 = await user.findOne({id_p: userId});
+        if(user1 === null) {
+            return res.status(404).send('Not found');
         }
         else {
-            res.status(200).send(user);
+            return res.status(200).json(user1);
         }
     }catch(err) {
+        console.log(err)
         res.status(500).send('Internal server error');
     }
 });
@@ -585,14 +581,15 @@ app.post('/user/:userId/:otherpersonId/follow', async(req, res) => {
 app.post('/GetFreelance/AddCards', async(req, res) => {
     console.log(req.body.email);
     try{
-        const user = await user.findOne({email: req.body.email});
-        console.log(req.body.email);
-        if(user === null) {
-            res.status(401).send('Unauthorized');
-        }
-        else {
+        // const user1 = await user.findOne({email: req.body.email});
+        // console.log(req.body.email);
+        // if(user1 === null) {
+        //     res.status(401).send('Unauthorized');
+        // }
+        // else {
+            // const findd = await freelance.findOne({email: req.body.email})
+            // if(findd === null) {
             const new_freelance_detail = new freelance({
-                _id: new mongoose.Types.ObjectId(),
                 name: req.body.name,
                 description: req.body.description,
                 category: req.body.category,
@@ -602,8 +599,11 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
             await new_freelance_detail.save();
             //Connection.db.db('collab').collection('freelance').insertOne(new_freelance_detail);
             res.status(200).send('OK');
+            // }
+            // else {
+            //     return res.status(409).json("Conflict");
+            // }
             
-        }
     }catch(err) {
         console.log(err);
         res.status(500).send('Internal server error');
