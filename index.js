@@ -18,6 +18,8 @@ const comment = require('./db/addcomment');
 const removedSpecified = require('./db/removeSpecified');
 const check_plag = require('./db/check_plag');
 const ENV = require('dotenv').config();
+const cloudinary = require("./MiddleWares/cloudinary");
+const upload = require("./MiddleWares/Multerrr")
 
 Connection.open();
 
@@ -550,3 +552,4 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
 app.listen(5050, () =>{ 
     console.log('Example app is listening on port 5050.')
 });
+
