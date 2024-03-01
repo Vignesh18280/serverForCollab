@@ -464,19 +464,85 @@ app.post('/forum/:blogId/see/:userId/like', async(req, res) => {
     }
 });
 
-app.post('/user/:userId/addproj', async(req, res) => {
+app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
     try{
+        //console.log(req)
         const id = req.params.userId;
+        // console.log(req)
+        // console.log(req.body)
+        // console.log(id)
         const org = getorg(id);
         const rollno = getrollno(id);
-        const user = await addproj.find({}).toArray();
+        const user = await addproj.find();
         const proj_count = user.length + 1;
         const id_c = org + '@' + rollno;
         const id_p = org + '@' + rollno + '@' + proj_count;
-        const projects = await addproj.find({}).toArray();
+        const projects = await addproj.find();
+        const images = [];
+        const videos = [];
+        const pdf = [];
+        const files = req.files; 
+        // console.log(req.files)       
+        // console.log(files);
+        const uploadPromises = files.map((file) => {
+            return new Promise(async (resolve, reject) => {
+                const mediatype = file.mimetype.startsWith('image') ? 'image' : file.mimetype.startsWith('video') ? 'video' : 'application';
+
+                try {
+                    const result = await cloudinary.uploader.upload(file.path, {
+                        resource_type: mediatype
+                    });
+
+                    if (mediatype === 'image') {
+                        images.push({
+                            mediaType: mediatype,
+                            url: result.secure_url,
+                            public_id : result.public_id
+                        });
+                    } else if(mediatype === 'video') {
+                        videos.push({
+                            mediaType: mediatype,
+                            url: result.secure_url,
+                            public_id : result.public_id
+                        });
+                    }
+                    else if(mediatype === 'application') {
+                        pdf.push({
+                            mediaType: mediatype,
+                            url: result.secure_url,
+                            public_id : result.public_id
+                        });
+                    }
+
+                    resolve();
+                } catch (error) {
+                    console.error(error);
+                    reject(new Error("Error while uploading to Cloudinary"));
+                }
+            });
+        });
+
+        await Promise.all(uploadPromises);
+
         const result = check_plag({title: req.body.title, desc: req.body.description}, projects);
         if(!result) {
-            await org.updateOne({id_o: org}, {$push: {wlist_p: {id: id_p, title: req.body.title, statement: req.body.statement, description: req.body.description, org: org, category: req.body.category , contributors: [...req.body.contributors, {id: id_c, name:user.name}], tech: req.body.tech, picture: req.body.picture, architecture_diagram: req.body.architecture_diagram, architecture_description: req.body.architecture_description, sponsors: [], video_url: req.body.video_url, insta: req.body.insta, twitter: req.body.twitter, github: req.body.github, slack: req.body.slack}}});
+            await org.updateOne({id_o: org},
+                 {$push: {wlist_p: {id: id_p, 
+                title: req.body.title, 
+                statement: req.body.statement, 
+                description: req.body.description, 
+                org: org, category: req.body.category , 
+                contributors: [...req.body.contributors, {id: id_c, name:user.name}]
+                , tech: req.body.tech,
+                 picture: images[0],
+                 decumentation : pdf[0],
+                   architecture_description: req.body.architecture_description, 
+                   sponsors: [], 
+                   video_url: videos[0], 
+                   insta: req.body.insta, 
+                   twitter: req.body.twitter,
+                    github: req.body.github, 
+                    slack: req.body.slack}}});
             //await Connection.db.db('collab').collection('projects').insertOne(NEW_PROJ);
             //await Connection.db.db('collab').collection('users-coll').updateOne({id_p: id_c}, {$push: {projects: proj_count}});
             res.status(200).send('OK');
