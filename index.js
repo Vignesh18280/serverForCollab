@@ -18,12 +18,12 @@ const {comment} = require('./db/addcomment');
 const removedSpecified = require('./db/removeSpecified');
 const check_plag = require('./db/check_plag');
 const ENV = require('dotenv').config();
-// const cloudinary = require("./MiddleWares/cloudinary");
-// const upload = require("./MiddleWares/Multer.js")
+const cloudinary = require("./MiddleWares/cloudinary");
+const upload = require("./MiddleWares/Multerrr")
 const {loginCred} = require('./db/loginCreds');
-const {foll} = require("./db/Followers.js")
+const {foll} = require("./db/Followers.js");
+const { promiseHooks } = require('v8');
 
-//Connection.open();
 
 const app = express();
 app.use(cors());
@@ -88,14 +88,25 @@ app.post('/register', async(req, res) => {
     }
 })
 
-app.post('/orgregister', async(req, res) => {
+app.post('/orgregister', upload.any() , async(req, res) => {
     try{
         const id_array = await org.find({});
         const teller = id_checker(id_array, req.body.id_o);
+        const files = req.files;
         if(teller === false) {
             res.status(409).send('Conflict');
         }
         else {
+            const images = [];
+            const uploadImages = files.map((file) => {
+                return new Promise((resolve, reject) => {
+                    cloudinary.uploader.upload(file.path, (result) => {
+                        images.push(result.secure_url);
+                        resolve();
+                    })
+                })
+            })
+            await Promise.all(uploadImages);
             const NEW_ORG = new org({
                 _id: new mongoose.Types.ObjectId(),
                 id_o: req.body.id_o.toUpperCase(),
@@ -107,6 +118,7 @@ app.post('/orgregister', async(req, res) => {
                 hackathons_p: [],
                 hackathons_w: [],
                 ranking: 0,
+                picture: images[0],
                 wlist_p: [],
                 wlist_u: []
             })
