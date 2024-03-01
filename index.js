@@ -23,6 +23,7 @@ const upload = require("./MiddleWares/Multerrr")
 const {loginCred} = require('./db/loginCreds');
 const {foll} = require("./db/Followers.js");
 const { promiseHooks } = require('v8');
+const {waitinguser} = require('./db/WaitingList');
 
 
 const app = express();
@@ -77,13 +78,27 @@ app.post('/register', async(req, res) => {
         else if(await user.findOne({id_p: id_string}) !== null) {
             res.status(409).send('Conflict');
         }else {
+            if(await waitinguser.findOne({id_w: id_string}) !== null) {
+                return res.status(409).send('Conflict');
+            }
+            const wait = new waitinguser({
+                id_w: id_string,
+                email: req.body.email,
+                name: req.body.name,
+                org: req.body.org,
+                rollno: req.body.rollno,
+                pass: req.body.password,
+                approve: false
+            });
+            await wait.save();
             // await Connection.db.db('collab').collection('login-credentials').insertOne({email: req.body.email, pass: req.body.password});
-            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
+            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id_w :id_string, name: req.body.name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {students: id_string}});
             //await Connection.db.db('collab').collection('users-coll').updateOne({email: req.body.email}, {$set: {id_p: id_string}});
             res.status(200).send('OK');
         }
     }catch(err){
+        console.log(err)
         res.status(500).send('Internal server error');
     }
 })
@@ -137,17 +152,18 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
     try{
         const approve = true;
         const get_org = await org.findOne({id_o: req.params.orgId});
+        console.log(get_org.wlist_u);
+        console.log(req.params.userId);
         if(approve === true) {
             let get;
             for(let i = 0; i < get_org.wlist_u.length; i++) {
-                if(get_org.wlist_u[i].id === req.params.userId) {
+                if(get_org.wlist_u[i].id_w === req.params.userId) {
                     get = i;
                     break;
                 }
             }
             const NEW_USER = new user({
-                _id: new mongoose.Types.ObjectId(),
-                id_p: get_org.wlist_u[get].id,
+                id_p: get_org.wlist_u[get].id_w,
                 email: get_org.wlist_u[get].email,
                 name: get_org.wlist_u[get].name,
                 pass: get_org.wlist_u[get].pass,
@@ -155,15 +171,17 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
                 rollno: get_org.wlist_u[get].rollno,
             })
             await NEW_USER.save();
-            await Connection.db.db('collab').collection('followers').insertOne({
-                id_f: get_org.wlist_u[get].id,
+            const newfoll = new foll({
+                id_f: get_org.wlist_u[get].id_w,
                 followers: [],
                 following: []
-            })
-            const CRED = new loginCred({email: get_org.wlist_u[get].email, pass: get_org.wlist_u[get].pass});
+            });
+            await newfoll.save();
+            const CRED = new loginCred({email: get_org.wlist_u[get].email, password: get_org.wlist_u[get].pass});
             await CRED.save();
-            const org = await org.findOne({id_o: req.params.orgId});
-            const new_Wlist_u = removedSpecified(req.params.userId, org.wlist_u);
+            const org1 = await org.findOne({id_o: req.params.orgId});
+            await waitinguser.deleteOne({id_w: req.params.userId});
+            const new_Wlist_u = removedSpecified(req.params.userId, org1.wlist_u);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id, name: get_org.wlist_u[get].name}}});
@@ -433,8 +451,8 @@ app.post('/user/:userId/addproj', async(req, res) => {
 
 app.get('/org/:orgId/wlistp', async(req, res) => {
     try{
-        const org = await org.findOne({id_o: req.params.orgId});
-        res.status(200).send(org.wlist_p);
+        const org1 = await org.findOne({id_o: req.params.orgId});
+        res.status(200).send(org1.wlist_p);
     }catch(err) {
         console.log(err);
         res.status(500).send('Internal server error');
@@ -443,8 +461,9 @@ app.get('/org/:orgId/wlistp', async(req, res) => {
 
 app.get('/org/:orgId/wlistu', async(req, res) => {
     try{
-        const org = await org.findOne({id_o: req.params.orgId});
-        res.status(200).send(org.wlist_u);
+       //console.log(req.params.orgId)
+        const org1 = await org.findOne({id_o: req.params.orgId});
+        res.status(200).json(org1.wlist_u);
     }catch(err) {
         console.log(err);
         res.status(500).send('Internal server error');
