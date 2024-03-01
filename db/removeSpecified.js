@@ -8,4 +8,4 @@ function removedSpecified(id, collection) {
     return collection;
 }
 
-module.exports = removedSpecified;
+module.exports = {removedSpecified};

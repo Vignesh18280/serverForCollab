@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const {query} = require('./db/postquery')
 const {comment} = require('./db/addcomment');
-const removedSpecified = require('./db/removeSpecified');
+const {removedSpecified} = require('./db/removeSpecified');
 const check_plag = require('./db/check_plag');
 const ENV = require('dotenv').config();
 const cloudinary = require("./MiddleWares/cloudinary");
@@ -264,11 +264,19 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
     }
 });
 
+
 app.post('/org/:orgId/:projId/approve', async(req, res) => {
     try{
-        const approve = req.body.approve;
+        const approve = req.body;
+        console.log(approve.approve)
         const get_org = await org.findOne({id_o: req.params.orgId});
-        if(approve === true) {
+        const whatever = [];
+            for(let i = 0; i < get_org.wlist_p.length; i++) {
+                if(get_org.wlist_p[i].id !== req.params.projId) {
+                    whatever.push(get_org.wlist_p[i]);
+                }
+            }
+        if(approve.approve === true) {
             let get;
             for(let i = 0; i < get_org.wlist_p.length; i++) {
                 if(get_org.wlist_p[i].id === req.params.projId) {
@@ -277,7 +285,6 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 }
             }
             const NEW_PROJ = new addproj({
-                _id: new mongoose.Types.ObjectId(),
                 id_p: get_org.wlist_p[get].id,
                 title: get_org.wlist_p[get].title,
                 statement:  get_org.wlist_p[get].statement,
@@ -287,7 +294,7 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 tech: get_org.wlist_p[get].tech,
                 picture: get_org.wlist_p[get].picture,
                 category: get_org.wlist_p[get].category,
-                architecture_diagram: get_org.wlist_p[get].architecture_diagram,
+                decumentation: get_org.wlist_p[get].decumentation,
                 architecture_description: get_org.wlist_p[get].architecture_description,
                 sponsors: [],
                 video_url: get_org.wlist_p[get].video_url,
@@ -297,16 +304,16 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 slack: get_org.wlist_p[get].slack
             });
             await NEW_PROJ.save();
-            const org = await org.findOne({id_o: req.params.orgId});
-            const new_Wlist_p = removedSpecified(req.params.projId, org.wlist_p);
-            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
+            const org1 = await org.findOne({id_o: req.params.orgId});
+            const new_Wlist_p = removedSpecified(req.params.projId, org1.wlist_p);
+            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: whatever}});
             await org.updateOne({id_o: req.params.orgId}, {$push: {projects: {id: req.body.projId, title: req.body.title}}});
             res.status(200).send('OK');
         }
         else {
-            const org = await org.findOne({id_o: req.params.orgId});
-            const new_Wlist_p = removedSpecified(req.params.projId, org.wlist_p);
-            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
+            const org1 = await org.findOne({id_o: req.params.orgId});
+            // const new_Wlist_p = removedSpecified(req.params.projId, org1.wlist_p);
+            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: whatever}});
             res.status(200).send('OK');
         }
     }catch(err) {
@@ -319,7 +326,8 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
 
 app.get('/projects', async(req, res) => {
     try{
-        const projects = await addproj.find({}).toArray();
+        const projects = await addproj.find();
+        console.log(projects)
         if(projects === null) {
             res.status(404).send('Not found');
         }
@@ -471,12 +479,12 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
         // console.log(req)
         // console.log(req.body)
         // console.log(id)
-        const org = getorg(id);
+        const org1 = getorg(id);
         const rollno = getrollno(id);
         const user = await addproj.find();
         const proj_count = user.length + 1;
-        const id_c = org + '@' + rollno;
-        const id_p = org + '@' + rollno + '@' + proj_count;
+        const id_c = org1 + '@' + rollno;
+        const id_p = org1 + '@' + rollno + '@' + proj_count;
         const projects = await addproj.find();
         const images = [];
         const videos = [];
@@ -524,25 +532,31 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
 
         await Promise.all(uploadPromises);
 
+        const one = images[0] ? images[0].url : "";
+        const two = videos[0] ? videos[0].url : "";
+        const three = pdf[0] ? pdf[0].url : "";
+
         const result = check_plag({title: req.body.title, desc: req.body.description}, projects);
         if(!result) {
-            await org.updateOne({id_o: org},
+            await org.updateOne({id_o: org1},
                  {$push: {wlist_p: {id: id_p, 
                 title: req.body.title, 
                 statement: req.body.statement, 
                 description: req.body.description, 
-                org: org, category: req.body.category , 
+                org: org1, category: req.body.category , 
                 contributors: [...req.body.contributors, {id: id_c, name:user.name}]
                 , tech: req.body.tech,
-                 picture: images[0],
-                 decumentation : pdf[0],
+                 picture: one,
+                 documentation : three,
                    architecture_description: req.body.architecture_description, 
                    sponsors: [], 
-                   video_url: videos[0], 
+                   video_url: two, 
                    insta: req.body.insta, 
                    twitter: req.body.twitter,
                     github: req.body.github, 
-                    slack: req.body.slack}}});
+                    slack: req.body.slack
+                }}
+            });
             //await Connection.db.db('collab').collection('projects').insertOne(NEW_PROJ);
             //await Connection.db.db('collab').collection('users-coll').updateOne({id_p: id_c}, {$push: {projects: proj_count}});
             res.status(200).send('OK');

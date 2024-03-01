@@ -10,7 +10,7 @@ const projSchema = new mongoose.Schema({
     category: String,
     tech: Array,
     picture: String,
-    decumentation: String,
+    documentation: String,
     architecture_description: String,
     sponsors: Array,
     video_url: String,
