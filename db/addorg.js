@@ -16,4 +16,6 @@ const orgSchema = new mongoose.Schema({
     wlist_u: Array
 })
 
-module.exports = mongoose.model('org', orgSchema);
+const org = mongoose.model('org', orgSchema);
+
+module.exports = {org}

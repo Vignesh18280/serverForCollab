@@ -7,5 +7,6 @@ const commentSchema = mongoose.Schema({
     comment: String,
     likes: Number
 });
+const comment = mongoose.model('comment', commentSchema);
 
-module.exports = mongoose.model('comment', commentSchema);
+module.exports = { comment}

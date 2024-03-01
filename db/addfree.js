@@ -9,4 +9,6 @@ const freellanceSchema = mongoose.Schema({
     budget: {type: Number, required: true},
 });
 
-module.exports = mongoose.model('freelance', freellanceSchema);
+const freelance = mongoose.model('freelance', freellanceSchema);
+
+module.exports = {freelance}
