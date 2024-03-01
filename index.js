@@ -41,7 +41,13 @@ app.post('/login', async(req, res) => {
         try{
             const user = await Connection.db.db('collab').collection('login-credentials').findOne({email: email});
             if(user === null) {
-                res.status(401).send('Unauthorized');
+                const org = await Connection.db.db('collab').collection('orgs').findOne({email: email});
+                if(org !== null) {
+                    if(org.password === password) {
+                        return res.status(200).send(org);
+                    }
+                }
+                else return res.status(401).send('Unauthorized');
             }
             else {
                 if(user.pass === password) {
