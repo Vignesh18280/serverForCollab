@@ -427,7 +427,7 @@ app.get('/forum', async(req, res) => {
 app.get('/forum/:blogId', async(req, res) => {
     try{
         const posts = await query.findOne({query_id: req.params.blogId});
-        res.status(200).send(posts);
+        res.status(200).json(posts);
     }catch(err) {
         console.log(err);
         res.status(500).send('Internal server error');
