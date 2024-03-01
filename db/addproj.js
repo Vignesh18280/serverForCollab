@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
-const projSchema = mongoose.Schema({
-    _id: mongoose.Schema.Types.ObjectId,
+const projSchema = new mongoose.Schema({
     id_p: String,
     title: String,
     statement: String,

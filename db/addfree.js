@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
-const freellanceSchema = mongoose.Schema({
-    _id: mongoose.Schema.Types.ObjectId,
+const freellanceSchema =new mongoose.Schema({
     email: {type: String, required: true},
     name: {type: String, required: true},
     description: {type: String, required: true},

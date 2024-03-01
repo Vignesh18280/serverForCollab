@@ -1,25 +1,27 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const {Connection} = require('./db/makeDb');
-const freelance = require('./db/addfree');
+// const {Connection} = require('./db/makeDb');
+const {freelance} = require('./db/addfree');
 const mongoose = require('mongoose');
-const user = require('./db/addperson');
+const {user} = require('./db/addperson');
 const check = require('./helpers/check');
 const id_checker = require('./helpers/id_checker');
-const org = require('./db/addorg');
+const {org} = require('./db/addorg');
 const getorg = require('./helpers/getorg');
-const addproj = require('./db/addproj');
+const {addproj} = require('./db/addproj');
 const getrollno = require('./helpers/getrollno');
 const fs = require('fs');
 const path = require('path');
-const query = require('./db/postquery')
-const comment = require('./db/addcomment');
+const {query} = require('./db/postquery')
+const {comment} = require('./db/addcomment');
 const removedSpecified = require('./db/removeSpecified');
 const check_plag = require('./db/check_plag');
 const ENV = require('dotenv').config();
-const cloudinary = require("./MiddleWares/cloudinary");
-const upload = require("./MiddleWares/Multer.js")
+// const cloudinary = require("./MiddleWares/cloudinary");
+// const upload = require("./MiddleWares/Multer.js")
+const {loginCred} = require('./db/loginCreds');
+const {foll} = require("./db/Followers.js")
 
 //Connection.open();
 
@@ -41,20 +43,15 @@ app.post('/login', async(req, res) => {
     }
     else {
         try{
-            const user = await Connection.db.db('collab').collection('login-credentials').findOne({email: email});
-            if(user === null) {
-                const org = await Connection.db.db('collab').collection('orgs').findOne({email: email});
-                if(org !== null) {
-                    if(org.password === password) {
-                        return res.status(200).send(org);
-                    }
-                }
-                else return res.status(401).send('Unauthorized');
+            const user1 = await loginCred.findOne({email: email});
+            console.log(user1)
+            if(user1 === null) {
+                return res.status(404).json("Not Found")
             }
             else {
-                if(user.pass === password) {
-                    const user = await Connection.db.db('collab').collection('users-coll').findOne({email: email});
-                    res.status(200).send(user);
+                if(user1.password === password) {
+                    //const user2 = await user.findOne({email: email});
+                    res.status(200).json(user1);
                     //res.status(200).send('OK');
                 }
                 else {
@@ -70,33 +67,18 @@ app.post('/login', async(req, res) => {
 app.post('/register', async(req, res) => {
     try{
         const id_string = req.body.org.toUpperCase() + '@' + req.body.rollno.toLowerCase();
-        if(await Connection.db.db('collab').collection('orgs').findOne({id_o: req.body.org.toUpperCase()}) === null) {
+        if(await org.findOne({id_o: req.body.org.toUpperCase()}) === null) {
             res.status(404).send('Not found');
         }
         else 
-        if(await Connection.db.db('collab').collection('login-credentials').findOne({email: req.body.email}) !== null) {
+        if(await loginCred.findOne({email: req.body.email}) !== null) {
             res.status(409).send('Conflict');
         }
-        else if(await Connection.db.db('collab').collection('users-coll').findOne({id_p: id_string}) !== null) {
+        else if(await user.findOne({id_p: id_string}) !== null) {
             res.status(409).send('Conflict');
         }else {
-            // const NEW_USER = new user({
-            //     _id: new mongoose.Types.ObjectId(),
-            //     id_p: id_string,
-            //     email: req.body.email,
-            //     name: req.body.first_name,
-            //     pass: req.body.password,
-            //     org: req.body.org.toUpperCase(),
-            //     rollno: req.body.rollno.toLowerCase(),
-            // })
-            // await Connection.db.db('collab').collection('users-coll').insertOne(NEW_USER);
-            // await Connection.db.db('collab').collection('followers').insertOne({
-            //     id_f: id_string,
-            //     followers: [],
-            //     following: []
-            // })
             // await Connection.db.db('collab').collection('login-credentials').insertOne({email: req.body.email, pass: req.body.password});
-            await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
+            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {students: id_string}});
             //await Connection.db.db('collab').collection('users-coll').updateOne({email: req.body.email}, {$set: {id_p: id_string}});
             res.status(200).send('OK');
@@ -108,7 +90,7 @@ app.post('/register', async(req, res) => {
 
 app.post('/orgregister', async(req, res) => {
     try{
-        const id_array = await Connection.db.db('collab').collection('orgs').find({}).toArray();
+        const id_array = await org.find({});
         const teller = id_checker(id_array, req.body.id_o);
         if(teller === false) {
             res.status(409).send('Conflict');
@@ -128,8 +110,9 @@ app.post('/orgregister', async(req, res) => {
                 wlist_p: [],
                 wlist_u: []
             })
-            await Connection.db.db('collab').collection('orgs').insertOne(NEW_ORG);
-            await Connection.db.db('collab').collection('login-credentials').insertOne({email: req.body.email, pass: req.body.password});
+            await NEW_ORG.save();
+            const CRED = new loginCred({email: req.body.email, password: req.body.password, tt: "org"});
+            await CRED.save();
             res.status(200).send('OK');
         }
     }catch(err) {
@@ -141,7 +124,7 @@ app.post('/orgregister', async(req, res) => {
 app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
     try{
         const approve = true;
-        const get_org = await Connection.db.db('collab').collection('orgs').findOne({id_o: req.params.orgId});
+        const get_org = await org.findOne({id_o: req.params.orgId});
         if(approve === true) {
             let get;
             for(let i = 0; i < get_org.wlist_u.length; i++) {
@@ -159,25 +142,26 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
                 org:  get_org.wlist_u[get].org,
                 rollno: get_org.wlist_u[get].rollno,
             })
-            await Connection.db.db('collab').collection('users-coll').insertOne(NEW_USER);
+            await NEW_USER.save();
             await Connection.db.db('collab').collection('followers').insertOne({
                 id_f: get_org.wlist_u[get].id,
                 followers: [],
                 following: []
             })
-            await Connection.db.db('collab').collection('login-credentials').insertOne({email: get_org.wlist_u[get].email, pass: get_org.wlist_u[get].pass});
-            const org = await Connection.db.db('collab').collection('orgs').findOne({id_o: req.params.orgId});
+            const CRED = new loginCred({email: get_org.wlist_u[get].email, pass: get_org.wlist_u[get].pass});
+            await CRED.save();
+            const org = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_u = removedSpecified(req.params.userId, org.wlist_u);
-            await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
+            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
-            await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id, name: get_org.wlist_u[get].name}}});
-            await Connection.db.db('collab').collection('users-coll').updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id}});
+            await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id, name: get_org.wlist_u[get].name}}});
+            await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id}});
             res.status(200).send('OK');
         }
         else {
-            const org = await Connection.db.db('collab').collection('orgs').findOne({id_o: req.params.orgId});
+            const org = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_u = removedSpecified(req.params.userId, org.wlist_u);
-            await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
+            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             res.status(200).send('OK');
         }
     }catch(err) {
@@ -189,7 +173,7 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
 app.post('/org/:orgId/:projId/approve', async(req, res) => {
     try{
         const approve = req.body.approve;
-        const get_org = await Connection.db.db('collab').collection('orgs').findOne({id_o: req.params.orgId});
+        const get_org = await org.findOne({id_o: req.params.orgId});
         if(approve === true) {
             let get;
             for(let i = 0; i < get_org.wlist_p.length; i++) {
@@ -218,17 +202,17 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 github: get_org.wlist_p[get].github,
                 slack: get_org.wlist_p[get].slack
             });
-            await Connection.db.db('collab').collection('projects').insertOne(NEW_PROJ);
-            const org = await Connection.db.db('collab').collection('orgs').findOne({id_o: req.params.orgId});
+            await NEW_PROJ.save();
+            const org = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_p = removedSpecified(req.params.projId, org.wlist_p);
-            await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
-            await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.params.orgId}, {$push: {projects: {id: req.body.projId, title: req.body.title}}});
+            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
+            await org.updateOne({id_o: req.params.orgId}, {$push: {projects: {id: req.body.projId, title: req.body.title}}});
             res.status(200).send('OK');
         }
         else {
-            const org = await Connection.db.db('collab').collection('orgs').findOne({id_o: req.params.orgId});
+            const org = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_p = removedSpecified(req.params.projId, org.wlist_p);
-            await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
+            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
             res.status(200).send('OK');
         }
     }catch(err) {
@@ -241,7 +225,7 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
 
 app.get('/projects', async(req, res) => {
     try{
-        const projects = await Connection.db.db('collab').collection('projects').find({}).toArray();
+        const projects = await addproj.find({}).toArray();
         if(projects === null) {
             res.status(404).send('Not found');
         }
@@ -255,7 +239,7 @@ app.get('/projects', async(req, res) => {
 
 app.get('/user/:userId/followers', async(req, res) => {
     try{
-        const get_followers = await Connection.db.db('collab').collection('followers').find({id_f: req.params.userId}).toArray();
+        const get_followers = await foll.find({id_f: req.params.userId}).toArray();
         res.status(200).send(get_followers[0].followers);
     }catch(err) {
         res.status(500).send('Internal server error');
@@ -264,7 +248,7 @@ app.get('/user/:userId/followers', async(req, res) => {
 
 app.get('/user/:userId/following', async(req, res) => {
     try{
-        const get_followers = await Connection.db.db('collab').collection('followers').find({id_f: req.params.userId}).toArray();
+        const get_followers = await foll.find({id_f: req.params.userId}).toArray();
         res.status(200).send(get_followers[0].following);
     }catch(err) {
         res.status(500).send('Internal server error');
@@ -274,7 +258,7 @@ app.get('/user/:userId/following', async(req, res) => {
 app.get('/project/:projectId', async(req, res) => {
     const projectId = req.params.projectId;
     try{
-        const project = await Connection.db.db('collab').collection('projects').findOne({id_p: projectId});
+        const project = await addproj.findOne({id_p: projectId});
         if(project === null) {
             res.status(404).send('Not found');
         }
@@ -292,7 +276,7 @@ app.get('/user/:userId/addproj', async(req, res) => {
         const org = getorg(i);
         const s = getrollno(i);
         const id = org + '@' + s;
-        const user = await Connection.db.db('collab').collection('followers').findOne({id_f: id});
+        const user = await foll.findOne({id_f: id});
         if(user === null) {
             console.log('Not found');
             res.status(404).send('Not found');
@@ -313,11 +297,11 @@ app.post('/user/:userId/postquery', async(req, res) => {
         const org = getorg(id);
         const rollno = getrollno(id);
         const REAL_ID = org + '@' + rollno;
-        const user = await Connection.db.db('collab').collection('users-coll').findOne({id_p: REAL_ID});
+        const user = await user.findOne({id_p: REAL_ID});
         //const date = new Date();
-        const user_see_queries = await Connection.db.db('collab').collection('ind_queries').findOne({id: REAL_ID});
-        const query_count = user_see_queries.queries + 1;
-        const blog_id = org+ '@' + rollno + '@' + query_count;
+        // const user_see_queries = await Connection.db.db('collab').collection('ind_queries').findOne({id: REAL_ID});
+        // const query_count = user_see_queries.queries + 1;
+        const blog_id = org+ '@' + rollno + '@' + Math.random() * 1000000;
         //we have to use multer for storing the image 
         const NEW_QUERY = new query({
             _id: new mongoose.Types.ObjectId(),
@@ -330,8 +314,9 @@ app.post('/user/:userId/postquery', async(req, res) => {
             // }
             commetns: []
         });
-        await Connection.db.db('collab').collection('queries').insertOne(NEW_QUERY);
-        await Connection.db.db('collab').collection('ind_queries').updateOne({id: REAL_ID}, {$set: {queries: query_count}});
+        //await Connection.db.db('collab').collection('queries').insertOne(NEW_QUERY);
+        await NEW_QUERY.save();
+        //await Connection.db.db('collab').collection('ind_queries').updateOne({id: REAL_ID}, {$set: {queries: query_count}});
         res.status(200).send('OK');
     }catch(err) {
         console.log(err);
@@ -341,7 +326,7 @@ app.post('/user/:userId/postquery', async(req, res) => {
 
 app.get('/forum', async(req, res) => {
     try{
-        const queries = await Connection.db.db('collab').collection('queries').find({}).toArray();
+        const queries = await query.find({}).toArray();
         res.status(200).send(queries);
     }catch(err) {
         console.log(err);
@@ -351,7 +336,7 @@ app.get('/forum', async(req, res) => {
 
 app.get('/forum/:blogId', async(req, res) => {
     try{
-        const posts = await Connection.db.db('collab').collection('queries').findOne({id: req.params.blogId}).toArray();
+        const posts = await query.findOne({id: req.params.blogId}).toArray();
         res.status(200).send(posts);
     }catch(err) {
         console.log(err);
@@ -361,7 +346,7 @@ app.get('/forum/:blogId', async(req, res) => {
 
 app.post('/forum/:blogId/see/:userId', async(req, res) => {
     try{
-        const user = await Connection.db.db('collab').collection('users-coll').findOne({id_p: req.params.userId});
+        const user = await user.findOne({id_p: req.params.userId});
         console.log(user.name);
         const NEW_COMMENT = new comment({
             _id: new mongoose.Types.ObjectId(),
@@ -370,7 +355,7 @@ app.post('/forum/:blogId/see/:userId', async(req, res) => {
             comment: req.body.comment,
             likes: 0
         });
-        await Connection.db.db('collab').collection('queries').updateOne({id: req.params.blogId}, {$push: {comments: NEW_COMMENT}});
+        await query.updateOne({id: req.params.blogId}, {$push: {comments: NEW_COMMENT}});
         res.status(200).send('OK');
     }catch(err) {
         console.log(err);
@@ -380,8 +365,8 @@ app.post('/forum/:blogId/see/:userId', async(req, res) => {
 
 app.post('/forum/:blogId/see/:userId/like', async(req, res) => {
     try{
-        const blog = await Connection.db.db('collab').collection('queries').findOne({id: req.params.blogId});
-        await Connection.db.db('collab').collection('queries').updateOne({id: req.params.blogId}, {$inc: {'comments.$[elem].likes': 1}});
+        const blog = await query.findOne({id: req.params.blogId});
+        await query.updateOne({id: req.params.blogId}, {$inc: {'comments.$[elem].likes': 1}});
         res.status(200).send('OK');
     }catch(err) {
         console.log(err);
@@ -394,7 +379,7 @@ app.post('/user/:userId/addproj', async(req, res) => {
         const id = req.params.userId;
         const org = getorg(id);
         const rollno = getrollno(id);
-        const user = await Connection.db.db('collab').collection('projects').find({}).toArray();
+        const user = await addproj.find({}).toArray();
         const proj_count = user.length + 1;
         const id_c = org + '@' + rollno;
         const id_p = org + '@' + rollno + '@' + proj_count;
@@ -417,10 +402,10 @@ app.post('/user/:userId/addproj', async(req, res) => {
         //     github: req.body.github,
         //     slack: req.body.slack
         // });
-        const projects = await Connection.db.db('collab').collection('projects').find({}).toArray();
+        const projects = await addproj.find({}).toArray();
         const result = check_plag({title: req.body.title, desc: req.body.description}, projects);
         if(!result) {
-            await Connection.db.db('collab').collection('orgs').updateOne({id_o: org}, {$push: {wlist_p: {id: id_p, title: req.body.title, statement: req.body.statement, description: req.body.description, org: org, category: req.body.category , contributors: [...req.body.contributors, {id: id_c, name:user.name}], tech: req.body.tech, picture: req.body.picture, architecture_diagram: req.body.architecture_diagram, architecture_description: req.body.architecture_description, sponsors: [], video_url: req.body.video_url, insta: req.body.insta, twitter: req.body.twitter, github: req.body.github, slack: req.body.slack}}});
+            await org.updateOne({id_o: org}, {$push: {wlist_p: {id: id_p, title: req.body.title, statement: req.body.statement, description: req.body.description, org: org, category: req.body.category , contributors: [...req.body.contributors, {id: id_c, name:user.name}], tech: req.body.tech, picture: req.body.picture, architecture_diagram: req.body.architecture_diagram, architecture_description: req.body.architecture_description, sponsors: [], video_url: req.body.video_url, insta: req.body.insta, twitter: req.body.twitter, github: req.body.github, slack: req.body.slack}}});
             //await Connection.db.db('collab').collection('projects').insertOne(NEW_PROJ);
             //await Connection.db.db('collab').collection('users-coll').updateOne({id_p: id_c}, {$push: {projects: proj_count}});
             res.status(200).send('OK');
@@ -436,7 +421,7 @@ app.post('/user/:userId/addproj', async(req, res) => {
 
 app.get('/org/:orgId/wlistp', async(req, res) => {
     try{
-        const org = await Connection.db.db('collab').collection('orgs').findOne({id_o: req.params.orgId});
+        const org = await org.findOne({id_o: req.params.orgId});
         res.status(200).send(org.wlist_p);
     }catch(err) {
         console.log(err);
@@ -446,7 +431,7 @@ app.get('/org/:orgId/wlistp', async(req, res) => {
 
 app.get('/org/:orgId/wlistu', async(req, res) => {
     try{
-        const org = await Connection.db.db('collab').collection('orgs').findOne({id_o: req.params.orgId});
+        const org = await org.findOne({id_o: req.params.orgId});
         res.status(200).send(org.wlist_u);
     }catch(err) {
         console.log(err);
@@ -456,7 +441,7 @@ app.get('/org/:orgId/wlistu', async(req, res) => {
 
 app.get('/GetFreelance', async(req, res) => {
     try{
-        const work_posts = await Connection.db.db('collab').collection('freelance').find({}).toArray();
+        const work_posts = await freelance.find({}).toArray();
         if(work_posts === null) {
             res.status(404).send('Not found');
         }
@@ -471,7 +456,7 @@ app.get('/GetFreelance', async(req, res) => {
 app.get('/GetFreelance/DetaulFree/:id', async(req, res) => {
     try {
         const id = req.params.id;
-        const details = await Connection.db.db('collab').collection('freelance').findOne({id: id});
+        const details = await freelance.findOne({id: id});
         res.status(200).send(details);
     }
     catch{
@@ -482,7 +467,7 @@ app.get('/GetFreelance/DetaulFree/:id', async(req, res) => {
 app.get('/user/:userId', async(req, res) => {
     const userId = req.params.userId;
     try{
-        const user = await Connection.db.db('collab').collection('users-coll').findOne({id_p: userId});
+        const user = await user.findOne({id_p: userId});
         if(user === null) {
             res.status(404).send('Not found');
         }
@@ -496,20 +481,20 @@ app.get('/user/:userId', async(req, res) => {
 
 app.post('/user/:userId/:otherpersonId/follow', async(req, res) => {
     try{
-        if(await Connection.db.db('collab').collection('followers').findOne({id_f: req.params.otherpersonId}) === null) {
+        if(await foll.findOne({id_f: req.params.otherpersonId}) === null) {
             res.status(404).send('Not found');
         }
         else{
-            const followers = await Connection.db.db('collab').collection('followers').find({id_f: req.params.userId}).toArray();
-            const user = await Connection.db.db('collab').collection('users-coll').findOne({id_p: req.params.otherpersonId});
-            const user2 = await Connection.db.db('collab').collection('users-coll').findOne({id_p: req.params.userId});
+            const followers = await foll.find({id_f: req.params.userId}).toArray();
+            const user = await user.findOne({id_p: req.params.otherpersonId});
+            const user2 = await user.findOne({id_p: req.params.userId});
             const teller = check(followers[0].following, req.params.otherpersonId);
             if(teller === false) {
                 res.status(409).send('Conflict');
             }
             else {
-                await Connection.db.db('collab').collection('followers').updateOne({id_f: req.params.otherpersonId}, {$push: {followers: {id: req.params.userId, name: user2.name}}});
-                await Connection.db.db('collab').collection('followers').updateOne({id_f: req.params.userId}, {$push: {following: {id:req.params.otherpersonId,name: user.name}}});
+                await foll.updateOne({id_f: req.params.otherpersonId}, {$push: {followers: {id: req.params.userId, name: user2.name}}});
+                await foll.updateOne({id_f: req.params.userId}, {$push: {following: {id:req.params.otherpersonId,name: user.name}}});
                 res.status(200).send('OK'); 
             }
         }
@@ -522,7 +507,7 @@ app.post('/user/:userId/:otherpersonId/follow', async(req, res) => {
 app.post('/GetFreelance/AddCards', async(req, res) => {
     console.log(req.body.email);
     try{
-        const user = await Connection.db.db('collab').collection('users-coll').findOne({email: req.body.email});
+        const user = await user.findOne({email: req.body.email});
         console.log(req.body.email);
         if(user === null) {
             res.status(401).send('Unauthorized');
@@ -536,7 +521,8 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
                 budget: req.body.budget,
                 email: req.body.email,
             });
-            Connection.db.db('collab').collection('freelance').insertOne(new_freelance_detail);
+            await new_freelance_detail.save();
+            //Connection.db.db('collab').collection('freelance').insertOne(new_freelance_detail);
             res.status(200).send('OK');
             
         }
@@ -547,9 +533,14 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
 });
 
 
-
-
 app.listen(5050, () =>{ 
     console.log('Example app is listening on port 5050.')
 });
 
+mongoose.connect(process.env.CONNECTION_URL, {useNewUrlParser: true, useUnifiedTopology: true})
+    .then(() => {
+        console.log("The database has been connected")
+    })
+    .catch((err) => {
+        console.log(err)
+    });
