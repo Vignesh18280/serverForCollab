@@ -391,13 +391,14 @@ app.post('/user/:userId/postquery', async(req, res) => {
         const org = getorg(id);
         const rollno = getrollno(id);
         const REAL_ID = org + '@' + rollno;
-        const user = await user.findOne({id_p: REAL_ID});
+        const user1 = await user.findOne({id_p: REAL_ID});
         //const date = new Date();
         // const user_see_queries = await Connection.db.db('collab').collection('ind_queries').findOne({id: REAL_ID});
         // const query_count = user_see_queries.queries + 1;
         const blog_id = org+ '@' + rollno + '@' + Math.random() * 1000000;
         //we have to use multer for storing the image 
         const NEW_QUERY = new query({
+            _id: new mongoose.Types.ObjectId(),
             query_id: blog_id,
             title: req.body.title,
             description: req.body.description,
@@ -425,7 +426,7 @@ app.get('/forum', async(req, res) => {
 
 app.get('/forum/:blogId', async(req, res) => {
     try{
-        const posts = await query.findOne({id: req.params.blogId}).toArray();
+        const posts = await query.findOne({query_id: req.params.blogId});
         res.status(200).send(posts);
     }catch(err) {
         console.log(err);
