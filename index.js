@@ -480,8 +480,9 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
         // console.log(id)
         const org1 = getorg(id);
         const rollno = getrollno(id);
+        const whatever = await user.findOne({id_p: rollno});
         const user1 = await addproj.find();
-        const proj_count = user.length + 1;
+        const proj_count = user1.length + 1;
         const id_c = org1 + '@' + rollno;
         const id_p = org1 + '@' + rollno + '@' + proj_count;
         const projects = await addproj.find();
@@ -543,7 +544,7 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
                 statement: req.body.statement, 
                 description: req.body.description, 
                 org: org1, category: req.body.category , 
-                contributors: [...req.body.contributors, {id: id_c, name:user1.name}]
+                contributors: [...req.body.contributors, {id: id_c, name:whatever}]
                 , tech: req.body.tech,
                  picture: one,
                  documentation : three,
