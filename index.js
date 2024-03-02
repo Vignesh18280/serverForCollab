@@ -544,7 +544,7 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
                 statement: req.body.statement, 
                 description: req.body.description, 
                 org: org1, category: req.body.category , 
-                contributors: [...req.body.contributors, {id: id_c, name:whatever}]
+                contributors: [...req.body.contributors, {id: id_c, name:whatever.name}]
                 , tech: req.body.tech,
                  picture: one,
                  documentation : three,
