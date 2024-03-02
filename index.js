@@ -34,7 +34,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.get('/', (req, res) => {
-
 })
 
 app.post('/login', async(req, res) => {
@@ -481,7 +480,7 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
         // console.log(id)
         const org1 = getorg(id);
         const rollno = getrollno(id);
-        const user = await addproj.find();
+        const user1 = await addproj.find();
         const proj_count = user.length + 1;
         const id_c = org1 + '@' + rollno;
         const id_p = org1 + '@' + rollno + '@' + proj_count;
@@ -544,7 +543,7 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
                 statement: req.body.statement, 
                 description: req.body.description, 
                 org: org1, category: req.body.category , 
-                contributors: [...req.body.contributors, {id: id_c, name:user.name}]
+                contributors: [...req.body.contributors, {id: id_c, name:user1.name}]
                 , tech: req.body.tech,
                  picture: one,
                  documentation : three,
@@ -697,7 +696,7 @@ app.listen(URL, () =>{
     console.log('Example app is listening on port 5050.')
 });
 
-const value = process.env.CONNECTION_URL
+const value = process.env.CONNECTION_URL 
 
 mongoose.connect(value)
     .then(() => {
