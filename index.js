@@ -480,7 +480,6 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
         // console.log(id)
         const org1 = getorg(id);
         const rollno = getrollno(id);
-        const whatever = await user.findOne({id_p: rollno});
         const user1 = await addproj.find();
         const proj_count = user1.length + 1;
         const id_c = org1 + '@' + rollno;
