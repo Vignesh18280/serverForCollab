@@ -697,7 +697,9 @@ app.listen(URL, () =>{
     console.log('Example app is listening on port 5050.')
 });
 
-mongoose.connect(process.env.CONNECTION_URL, {useNewUrlParser: true, useUnifiedTopology: true})
+const value = process.env.CONNECTION_URL
+
+mongoose.connect(value)
     .then(() => {
         console.log("The database has been connected")
     })
