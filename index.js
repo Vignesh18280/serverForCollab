@@ -691,8 +691,9 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
     }
 });
 
+const URL = process.env.PORT || 5050;
 
-app.listen(5050, () =>{ 
+app.listen(URL, () =>{ 
     console.log('Example app is listening on port 5050.')
 });
 
