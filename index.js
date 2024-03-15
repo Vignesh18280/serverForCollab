@@ -249,7 +249,7 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
             const new_Wlist_u = removedSpecified(req.params.userId, org1.wlist_u);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
-            await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id, name: get_org.wlist_u[get].name}}});
+            await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id_w, name: get_org.wlist_u[get].name}}});
             await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id}});
             res.status(200).send('OK');
         }
@@ -308,6 +308,10 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
             console.log(get_org.wlist_p[get].id)
             console.log(getrollno(get_org.wlist_p[get].id))
             await NEW_PROJ.save();
+            await client.sAdd( 'Projects' , JSON.stringify(NEW_PROJ));
+            const projectJSON = NEW_PROJ.id_p;
+            // await client.hSet(`SingleProject:${projectJSON}`, NEW_PROJ);
+            await client.hSet(`SingleProject:${projectJSON}`, 'projectData', JSON.stringify(NEW_PROJ));
             const org1 = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_p = removedSpecified(req.params.projId, org1.wlist_p);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: whatever}});
@@ -331,6 +335,15 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
 
 app.get('/projects', async(req, res) => {
     try{
+        const cachedData = await client.sMembers('Projects');
+        AllBro = [];
+        for(i = 0; i < cachedData.length; i++){
+            AllBro.push(JSON.parse(cachedData[i]));
+        }
+        // console.log(cachedData);
+        if(cachedData.length > 0){
+            return res.status(200).json(AllBro);
+        }
         const projects = await addproj.find();
         console.log(projects)
         if(projects === null) {
@@ -365,6 +378,10 @@ app.get('/user/:userId/following', async(req, res) => {
 app.get('/project/:projectId', async(req, res) => {
     const projectId = req.params.projectId;
     try{
+        const cachedData = await client.hGetAll(`SingleProject:${projectId}`);
+        if(cachedData.length){
+            return res.status(200).json(cachedData);
+        }
         const project = await addproj.findOne({id_p: projectId});
         if(project === null) {
             res.status(404).send('Not found');
@@ -599,6 +616,14 @@ app.get('/org/:orgId/wlistu', async(req, res) => {
 
 app.get('/GetFreelance', async(req, res) => {
     try{
+        const cachedData = await client.sMembers('Freelance');
+        AllBro = [];
+        for(i = 0; i < cachedData.length; i++){
+            AllBro.push(JSON.parse(cachedData[i]));
+        }
+        if(cachedData.length > 0){
+            return res.status(200).json(AllBro);
+        }
         const work_posts = await freelance.find({});
         if(work_posts === null) {
             res.status(404).send('Not found');
@@ -614,6 +639,10 @@ app.get('/GetFreelance', async(req, res) => {
 app.get('/GetFreelance/DetaulFree/:id', async(req, res) => {
     try {
         const id = req.params.id;
+        const cachedData = await client.hGetAll(`SingleFreelance:${req.params.id}`);
+        if(cachedData.length){
+            return res.status(200).json(cachedData);
+        }
         //console.log(id)
         const details = await freelance.findOne({_id: id});
         //console.log(details)
@@ -684,13 +713,12 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
                 budget: req.body.budget,
                 email: req.body.email,
             });
-            await new_freelance_detail.save();
-            //Connection.db.db('collab').collection('freelance').insertOne(new_freelance_detail);
-            res.status(200).send('OK');
-            // }
-            // else {
-            //     return res.status(409).json("Conflict");
-            // }
+            await client.sAdd( 'Freelance' , JSON.stringify(new_freelance_detail));
+            await new_freelance_detail.save()
+            .then(async(result) => {
+                await client.hSet(`SingleFreelance:${result._id}`, 'FreeLanceData', JSON.stringify(new_freelance_detail));
+                return res.status(200).send('OK');
+            })
             
     }catch(err) {
         console.log(err);
