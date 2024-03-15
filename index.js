@@ -269,8 +269,8 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
 app.post('/org/:orgId/:projId/approve', async(req, res) => {
     try{
         const approve = req.body;
-        console.log(req.body);
-        console.log(approve.approve)
+        //console.log(req.body);
+        //console.log(approve.approve)
         const get_org = await org.findOne({id_o: req.params.orgId});
         const whatever = [];
             for(let i = 0; i < get_org.wlist_p.length; i++) {
@@ -305,11 +305,14 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 github: get_org.wlist_p[get].github,
                 slack: get_org.wlist_p[get].slack
             });
+            console.log(get_org.wlist_p[get].id)
+            console.log(getrollno(get_org.wlist_p[get].id))
             await NEW_PROJ.save();
             const org1 = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_p = removedSpecified(req.params.projId, org1.wlist_p);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: whatever}});
             await org.updateOne({id_o: req.params.orgId}, {$push: {projects: {id: req.body.projId, title: req.body.title}}});
+            await user.updateOne({id_p: getrollno(get_org.wlist_p[get].id)}, {$push: {projects: {id: req.params.projId, title: get_org.wlist_p[get].title}}});
             res.status(200).send('OK');
         }
         else {
@@ -379,7 +382,7 @@ app.get('/user/:userId/addproj', async(req, res) => {
         const i = req.params.userId;
         const org = getorg(i);
         const s = getrollno(i);
-        const id = org + '@' + s;
+        const id = s;
         const user = await foll.findOne({id_f: id});
         if(user === null) {
             console.log('Not found');
@@ -476,18 +479,18 @@ app.post('/forum/:blogId/see/:userId/like', async(req, res) => {
 
 app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
     try{
-        console.log("hello");
-        console.log(req)
+        //console.log("hello");
+        //console.log(req)
         const id = req.params.userId;
         // console.log(req)
         // console.log(req.body)
-        // console.log(id)
+        //console.log(id)
         const org1 = getorg(id);
         const rollno = getrollno(id);
         const user1 = await addproj.find();
         const proj_count = user1.length + 1;
         const id_c = org1 + '@' + rollno;
-        const id_p = org1 + '@' + rollno + '@' + proj_count;
+        const id_p = id + '@' + Math.random() * 1000000;
         const projects = await addproj.find();
         const images = [];
         const videos = [];
@@ -547,7 +550,7 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
                 statement: req.body.statement, 
                 description: req.body.description, 
                 org: org1, category: req.body.category , 
-                contributors: [...req.body.contributors, {id: id_c, name: null}]
+                contributors: [...req.body.contributors, {id: id, name: null}]
                 , tech: req.body.tech,
                  picture: one,
                  documentation : three,
