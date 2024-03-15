@@ -5,8 +5,11 @@ const client = createClient();
 client.on('error', err => console.log('Redis Client Error', err));
 
 client.connect({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT
+    root:true,
+    user: process.env.REDISUSER,
+    host: process.env.REDISHOST,
+    port: process.env.REDISPORT,
+    password: process.env.REDISPASSWORD
 });
 
 module.exports = {client};
