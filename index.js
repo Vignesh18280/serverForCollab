@@ -34,6 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.get('/', (req, res) => {
+    res.send('Hello World');
 })
 
 app.post('/login', async(req, res) => {
@@ -267,6 +268,7 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
 app.post('/org/:orgId/:projId/approve', async(req, res) => {
     try{
         const approve = req.body;
+        console.log(req.body);
         console.log(approve.approve)
         const get_org = await org.findOne({id_o: req.params.orgId});
         const whatever = [];
@@ -473,7 +475,8 @@ app.post('/forum/:blogId/see/:userId/like', async(req, res) => {
 
 app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
     try{
-        //console.log(req)
+        console.log("hello");
+        console.log(req)
         const id = req.params.userId;
         // console.log(req)
         // console.log(req.body)
@@ -489,11 +492,11 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
         const videos = [];
         const pdf = [];
         const files = req.files; 
-        // console.log(req.files)       
-        // console.log(files);
+        //console.log(req.files)       
+        //console.log(files);
         const uploadPromises = files.map((file) => {
             return new Promise(async (resolve, reject) => {
-                const mediatype = file.mimetype.startsWith('image') ? 'image' : file.mimetype.startsWith('video') ? 'video' : 'application';
+                const mediatype = file.mimetype.startsWith('image') ? 'image' : (file.mimetype.startsWith('application') ? 'application' : 'video');
 
                 try {
                     const result = await cloudinary.uploader.upload(file.path, {
@@ -622,6 +625,7 @@ app.get('/user/:userId', async(req, res) => {
     try{
         const user1 = await user.findOne({id_p: userId});
         if(user1 === null) {
+            console.log('Not found')
             return res.status(404).send('Not found');
         }
         else {
@@ -693,7 +697,7 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
 const URL = process.env.PORT || 5050;
 
 app.listen(URL, () =>{ 
-    console.log('Example app is listening on port 5050.')
+    console.log(`Example app is listening on port ${URL}.`)
 });
 
 const value = process.env.CONNECTION_URL 
