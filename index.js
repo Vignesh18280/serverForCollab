@@ -24,7 +24,7 @@ const {loginCred} = require('./db/loginCreds');
 const {foll} = require("./db/Followers.js");
 const { promiseHooks } = require('v8');
 const {waitinguser} = require('./db/WaitingList');
-const client = require('./client');
+const {client} = require('./client');
 
 
 const app = express();
