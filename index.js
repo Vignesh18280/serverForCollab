@@ -25,7 +25,9 @@ const {foll} = require("./db/Followers.js");
 const { promiseHooks } = require('v8');
 const {waitinguser} = require('./db/WaitingList');
 const {client} = require('./client');
-
+const bcrypt = require('bcrypt');
+const validator = require('validator');
+const e = require('express');
 
 const app = express();
 app.use(cors());
@@ -79,18 +81,27 @@ app.post('/register', async(req, res) => {
         else if(await user.findOne({id_p: id_string}) !== null) {
             res.status(409).send('Conflict');
         }else {
+
             if(await waitinguser.findOne({id_w: id_string}) !== null) {
                 return res.status(409).send('Conflict');
             }
+
+            const planePass = req.body.password;
+            if(!validator.isStrongPassword(planePass)){
+                return res.status(409).json("Enter a strong Password");
+            }
+            const salt = await bcrypt.genSalt(10);
+            const encryPassword = await bcrypt.hash(planePass , salt);
             const wait = new waitinguser({
                 id_w: id_string,
                 email: req.body.email,
                 name: req.body.name,
                 org: req.body.org,
                 rollno: req.body.rollno,
-                pass: req.body.password,
+                pass: encryPassword,
                 approve: false
             });
+            console.log("this is : " , wait)
             await wait.save();
             // await Connection.db.db('collab').collection('login-credentials').insertOne({email: req.body.email, pass: req.body.password});
             await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id_w :id_string, name: req.body.name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
@@ -124,11 +135,19 @@ app.post('/orgregister', upload.any() , async(req, res) => {
       
             await uploadImages();
             console.log(images);
+
+            const planePassword = req.body.password;
+            if(!validator.isStrongPassword(planePassword)){
+                return res.status(409).json("Enter a strong Password")
+            }
+            const salt = await bcrypt.genSalt(10);
+            const encryPassword = bcrypt.hash(planePassword , salt);
+
             const NEW_ORG = new org({
                 id_o: req.body.id_o.toUpperCase(),
                 name: req.body.name,
                 email: req.body.email,
-                pass: req.body.password,
+                pass: encryPassword,
                 students: [],
                 projects: [],
                 hackathons_p: [],
