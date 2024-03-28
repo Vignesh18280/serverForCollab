@@ -248,13 +248,11 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
             const org1 = await org.findOne({id_o: req.params.orgId});
             await waitinguser.deleteOne({id_w: req.params.userId});
             const new_Wlist_u = removedSpecified(req.params.userId, org1.wlist_u);
-            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
+            //await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id_w, name: get_org.wlist_u[get].name}}});
             await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id_w}});
-=======
-            await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id}});
->>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
+            //await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id}});
             res.status(200).send('OK');
         }
         else {
@@ -343,26 +341,13 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
 
 app.get('/projects', async(req, res) => {
     try{
-<<<<<<< HEAD
-        const projects = await addproj.find({});
-=======
-        const cachedData = await client.sMembers('Projects');
-        AllBro = [];
-        for(i = 0; i < cachedData.length; i++){
-            AllBro.push(JSON.parse(cachedData[i]));
-        }
-        // console.log(cachedData);
-        if(cachedData.length > 0){
-            return res.status(200).json(AllBro);
-        }
-        const projects = await addproj.find();
-        console.log(projects)
->>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
-        if(projects === null) {
+        const projects1 = await addproj.find();
+        console.log(projects1)
+        if(projects1 === null) {
             res.status(404).send('Not found');
         }
         else {
-            res.status(200).send(projects);
+            res.status(200).send(projects1);
         }
     }catch(err) {
         console.log(err);
@@ -391,10 +376,10 @@ app.get('/user/:userId/following', async(req, res) => {
 app.get('/project/:projectId', async(req, res) => {
     const projectId = req.params.projectId;
     try{
-        const cachedData = await client.hGetAll(`SingleProject:${projectId}`);
-        if(cachedData.length){
-            return res.status(200).json(cachedData);
-        }
+        // const cachedData = await client.hGetAll(`SingleProject:${projectId}`);
+        // if(cachedData.length){
+        //     return res.status(200).json(cachedData);
+        // }
         const project = await addproj.findOne({id_p: projectId});
         if(project === null) {
             res.status(404).send('Not found');
@@ -629,14 +614,14 @@ app.get('/org/:orgId/wlistu', async(req, res) => {
 
 app.get('/GetFreelance', async(req, res) => {
     try{
-        const cachedData = await client.sMembers('Freelance');
-        AllBro = [];
-        for(i = 0; i < cachedData.length; i++){
-            AllBro.push(JSON.parse(cachedData[i]));
-        }
-        if(cachedData.length > 0){
-            return res.status(200).json(AllBro);
-        }
+        // const cachedData = await client.sMembers('Freelance');
+        // AllBro = [];
+        // for(i = 0; i < cachedData.length; i++){
+        //     AllBro.push(JSON.parse(cachedData[i]));
+        // }
+        // if(cachedData.length > 0){
+        //     return res.status(200).json(AllBro);
+        // }
         const work_posts = await freelance.find({});
         if(work_posts === null) {
             res.status(404).send('Not found');
@@ -652,10 +637,10 @@ app.get('/GetFreelance', async(req, res) => {
 app.get('/GetFreelance/DetaulFree/:id', async(req, res) => {
     try {
         const id = req.params.id;
-        const cachedData = await client.hGetAll(`SingleFreelance:${req.params.id}`);
-        if(cachedData.length){
-            return res.status(200).json(cachedData);
-        }
+        // const cachedData = await client.hGetAll(`SingleFreelance:${req.params.id}`);
+        // if(cachedData.length){
+        //     return res.status(200).json(cachedData);
+        // }
         //console.log(id)
         const details = await freelance.findOne({_id: id});
         //console.log(details)
