@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const {query} = require('./db/postquery')
 const {comment} = require('./db/addcomment');
-const removedSpecified = require('./db/removeSpecified');
+const {removedSpecified} = require('./db/removeSpecified');
 const check_plag = require('./db/check_plag');
 const ENV = require('dotenv').config();
 const cloudinary = require("./MiddleWares/cloudinary");
@@ -24,6 +24,7 @@ const {loginCred} = require('./db/loginCreds');
 const {foll} = require("./db/Followers.js");
 const { promiseHooks } = require('v8');
 const {waitinguser} = require('./db/WaitingList');
+const {client} = require('./client');
 
 
 const app = express();
@@ -34,7 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.get('/', (req, res) => {
-
+    res.send('Hello World');
 })
 
 app.post('/login', async(req, res) => {
@@ -250,7 +251,11 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id_w, name: get_org.wlist_u[get].name}}});
+<<<<<<< HEAD
             await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id_w}});
+=======
+            await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id}});
+>>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
             res.status(200).send('OK');
         }
         else {
@@ -265,10 +270,22 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
     }
 });
 
+
 app.post('/org/:orgId/:projId/approve', async(req, res) => {
     try{
-        const approve = req.body.approve;
+        const approve = req.body;
+        //console.log(req.body);
+        //console.log(approve.approve)
         const get_org = await org.findOne({id_o: req.params.orgId});
+<<<<<<< HEAD
+=======
+        const whatever = [];
+            for(let i = 0; i < get_org.wlist_p.length; i++) {
+                if(get_org.wlist_p[i].id !== req.params.projId) {
+                    whatever.push(get_org.wlist_p[i]);
+                }
+            }
+>>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
         if(approve.approve === true) {
             let get;
             for(let i = 0; i < get_org.wlist_p.length; i++) {
@@ -287,7 +304,11 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 tech: get_org.wlist_p[get].tech,
                 picture: get_org.wlist_p[get].picture,
                 category: get_org.wlist_p[get].category,
+<<<<<<< HEAD
                 documentation: get_org.wlist_p[get].documentation,
+=======
+                decumentation: get_org.wlist_p[get].decumentation,
+>>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
                 architecture_description: get_org.wlist_p[get].architecture_description,
                 sponsors: [],
                 video_url: get_org.wlist_p[get].video_url,
@@ -296,18 +317,32 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 github: get_org.wlist_p[get].github,
                 slack: get_org.wlist_p[get].slack
             });
+            console.log(get_org.wlist_p[get].id)
+            console.log(getrollno(get_org.wlist_p[get].id))
             await NEW_PROJ.save();
-            const org = await org.findOne({id_o: req.params.orgId});
-            const new_Wlist_p = removedSpecified(req.params.projId, org.wlist_p);
-            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
+            await client.sAdd( 'Projects' , JSON.stringify(NEW_PROJ));
+            const projectJSON = NEW_PROJ.id_p;
+            // await client.hSet(`SingleProject:${projectJSON}`, NEW_PROJ);
+            await client.hSet(`SingleProject:${projectJSON}`, 'projectData', JSON.stringify(NEW_PROJ));
+            const org1 = await org.findOne({id_o: req.params.orgId});
+            const new_Wlist_p = removedSpecified(req.params.projId, org1.wlist_p);
+            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: whatever}});
             await org.updateOne({id_o: req.params.orgId}, {$push: {projects: {id: req.body.projId, title: req.body.title}}});
+            await user.updateOne({id_p: getrollno(get_org.wlist_p[get].id)}, {$push: {projects: {id: req.params.projId, title: get_org.wlist_p[get].title}}});
             res.status(200).send('OK');
         }
         else {
+<<<<<<< HEAD
             const org = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_p = removedSpecified(req.params.projId, org.wlist_p);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
             res.status(200).send('OK' );
+=======
+            const org1 = await org.findOne({id_o: req.params.orgId});
+            // const new_Wlist_p = removedSpecified(req.params.projId, org1.wlist_p);
+            await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: whatever}});
+            res.status(200).send('OK');
+>>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
         }
     }catch(err) {
         console.log(err);
@@ -319,7 +354,21 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
 
 app.get('/projects', async(req, res) => {
     try{
+<<<<<<< HEAD
         const projects = await addproj.find({});
+=======
+        const cachedData = await client.sMembers('Projects');
+        AllBro = [];
+        for(i = 0; i < cachedData.length; i++){
+            AllBro.push(JSON.parse(cachedData[i]));
+        }
+        // console.log(cachedData);
+        if(cachedData.length > 0){
+            return res.status(200).json(AllBro);
+        }
+        const projects = await addproj.find();
+        console.log(projects)
+>>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
         if(projects === null) {
             res.status(404).send('Not found');
         }
@@ -353,6 +402,10 @@ app.get('/user/:userId/following', async(req, res) => {
 app.get('/project/:projectId', async(req, res) => {
     const projectId = req.params.projectId;
     try{
+        const cachedData = await client.hGetAll(`SingleProject:${projectId}`);
+        if(cachedData.length){
+            return res.status(200).json(cachedData);
+        }
         const project = await addproj.findOne({id_p: projectId});
         if(project === null) {
             res.status(404).send('Not found');
@@ -370,7 +423,7 @@ app.get('/user/:userId/addproj', async(req, res) => {
         const i = req.params.userId;
         const org = getorg(i);
         const s = getrollno(i);
-        const id = org + '@' + s;
+        const id = s;
         const user = await foll.findOne({id_f: id});
         if(user === null) {
             console.log('Not found');
@@ -467,10 +520,12 @@ app.post('/forum/:blogId/see/:userId/like', async(req, res) => {
 
 app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
     try{
+        //console.log("hello");
         //console.log(req)
         const id = req.params.userId;
         // console.log(req)
         // console.log(req.body)
+<<<<<<< HEAD
         // console.log(id)
         const org1 = getorg(id);
         const rollno = getrollno(id);
@@ -478,16 +533,25 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
         const proj_count = user.length + 1;
         const id_c = org1 + '@' + rollno;
         const id_p = org1 + '@' + rollno + '@' + proj_count;
+=======
+        //console.log(id)
+        const org1 = getorg(id);
+        const rollno = getrollno(id);
+        const user1 = await addproj.find();
+        const proj_count = user1.length + 1;
+        const id_c = org1 + '@' + rollno;
+        const id_p = id + '@' + Math.random() * 1000000;
+>>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
         const projects = await addproj.find();
         const images = [];
         const videos = [];
         const pdf = [];
         const files = req.files; 
-        // console.log(req.files)       
-        // console.log(files);
+        //console.log(req.files)       
+        //console.log(files);
         const uploadPromises = files.map((file) => {
             return new Promise(async (resolve, reject) => {
-                const mediatype = file.mimetype.startsWith('image') ? 'image' : file.mimetype.startsWith('video') ? 'video' : 'application';
+                const mediatype = file.mimetype.startsWith('image') ? 'image' : (file.mimetype.startsWith('application') ? 'application' : 'video');
 
                 try {
                     const result = await cloudinary.uploader.upload(file.path, {
@@ -525,6 +589,10 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
 
         await Promise.all(uploadPromises);
 
+        const one = images[0] ? images[0].url : "";
+        const two = videos[0] ? videos[0].url : "";
+        const three = pdf[0] ? pdf[0].url : "";
+
         const result = check_plag({title: req.body.title, desc: req.body.description}, projects);
         if(!result) {
             await org.updateOne({id_o: org1},
@@ -533,17 +601,26 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
                 statement: req.body.statement, 
                 description: req.body.description, 
                 org: org1, category: req.body.category , 
+<<<<<<< HEAD
                 contributors: [...req.body.contributors, {id: id_c, name:user.name}]
                 , tech: req.body.tech,
                  picture: images[0],
                  documentation : pdf[0],
+=======
+                contributors: [...req.body.contributors, {id: id, name: null}]
+                , tech: req.body.tech,
+                 picture: one,
+                 documentation : three,
+>>>>>>> c6a0e2c8f965421fdb378992cd0572583f20a497
                    architecture_description: req.body.architecture_description, 
                    sponsors: [], 
-                   video_url: videos[0], 
+                   video_url: two, 
                    insta: req.body.insta, 
                    twitter: req.body.twitter,
                     github: req.body.github, 
-                    slack: req.body.slack}}});
+                    slack: req.body.slack
+                }}
+            });
             //await Connection.db.db('collab').collection('projects').insertOne(NEW_PROJ);
             //await Connection.db.db('collab').collection('users-coll').updateOne({id_p: id_c}, {$push: {projects: proj_count}});
             res.status(200).send('OK');
@@ -580,6 +657,14 @@ app.get('/org/:orgId/wlistu', async(req, res) => {
 
 app.get('/GetFreelance', async(req, res) => {
     try{
+        const cachedData = await client.sMembers('Freelance');
+        AllBro = [];
+        for(i = 0; i < cachedData.length; i++){
+            AllBro.push(JSON.parse(cachedData[i]));
+        }
+        if(cachedData.length > 0){
+            return res.status(200).json(AllBro);
+        }
         const work_posts = await freelance.find({});
         if(work_posts === null) {
             res.status(404).send('Not found');
@@ -595,6 +680,10 @@ app.get('/GetFreelance', async(req, res) => {
 app.get('/GetFreelance/DetaulFree/:id', async(req, res) => {
     try {
         const id = req.params.id;
+        const cachedData = await client.hGetAll(`SingleFreelance:${req.params.id}`);
+        if(cachedData.length){
+            return res.status(200).json(cachedData);
+        }
         //console.log(id)
         const details = await freelance.findOne({_id: id});
         //console.log(details)
@@ -610,6 +699,7 @@ app.get('/user/:userId', async(req, res) => {
     try{
         const user1 = await user.findOne({id_p: userId});
         if(user1 === null) {
+            console.log('Not found')
             return res.status(404).send('Not found');
         }
         else {
@@ -664,13 +754,12 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
                 budget: req.body.budget,
                 email: req.body.email,
             });
-            await new_freelance_detail.save();
-            //Connection.db.db('collab').collection('freelance').insertOne(new_freelance_detail);
-            res.status(200).send('OK');
-            // }
-            // else {
-            //     return res.status(409).json("Conflict");
-            // }
+            await client.sAdd( 'Freelance' , JSON.stringify(new_freelance_detail));
+            await new_freelance_detail.save()
+            .then(async(result) => {
+                await client.hSet(`SingleFreelance:${result._id}`, 'FreeLanceData', JSON.stringify(new_freelance_detail));
+                return res.status(200).send('OK');
+            })
             
     }catch(err) {
         console.log(err);
@@ -678,12 +767,15 @@ app.post('/GetFreelance/AddCards', async(req, res) => {
     }
 });
 
+const URL = process.env.PORT || 5050;
 
-app.listen(5050, () =>{ 
-    console.log('Example app is listening on port 5050.')
+app.listen(URL, () =>{ 
+    console.log(`Example app is listening on port ${URL}.`)
 });
 
-mongoose.connect(process.env.CONNECTION_URL, {useNewUrlParser: true, useUnifiedTopology: true})
+const value = process.env.CONNECTION_URL 
+
+mongoose.connect(value)
     .then(() => {
         console.log("The database has been connected")
     })
