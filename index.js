@@ -269,14 +269,14 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
             const new_Wlist_u = removedSpecified(req.params.userId, org1.wlist_u);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
-            //await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id_w, name: get_org.wlist_u[get].name}}});
+            await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id_w, name: get_org.wlist_u[get].name}}});
             await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id_w}});
             //await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id}});
             res.status(200).send('OK');
         }
         else {
-            const org = await org.findOne({id_o: req.params.orgId});
-            const new_Wlist_u = removedSpecified(req.params.userId, org.wlist_u);
+            const org1 = await org.findOne({id_o: req.params.orgId});
+            const new_Wlist_u = removedSpecified(req.params.userId, org1.wlist_u);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             res.status(200).send('OK');
         }
@@ -337,13 +337,13 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
             const org1 = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_p = removedSpecified(req.params.projId, org1.wlist_p);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: whatever}});
-            await org.updateOne({id_o: req.params.orgId}, {$push: {projects: {id: req.body.projId, title: req.body.title}}});
+            await org.updateOne({id_o: req.params.orgId}, {$push: {projects: {id: req.params.projId, title: get_org.wlist_p[get].title}}});
             await user.updateOne({id_p: getrollno(get_org.wlist_p[get].id)}, {$push: {projects: {id: req.params.projId, title: get_org.wlist_p[get].title}}});
             res.status(200).send('OK');
         }
         else {
-            const org = await org.findOne({id_o: req.params.orgId});
-            const new_Wlist_p = removedSpecified(req.params.projId, org.wlist_p);
+            const org2 = await org.findOne({id_o: req.params.projId});
+            const new_Wlist_p = removedSpecified(req.params.projId, org2.wlist_p);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
             res.status(200).send('OK' );
             const org1 = await org.findOne({id_o: req.params.orgId});
