@@ -67,6 +67,7 @@ app.post('/login', async(req, res) => {
 app.post('/register', async(req, res) => {
     try{
         const id_string = req.body.org.toUpperCase() + '@' + req.body.rollno.toLowerCase();
+        //console.log(req.body.name)
         if(await org.findOne({id_o: req.body.org.toUpperCase()}) === null) {
             res.status(404).send('Not found');
         }
@@ -91,7 +92,7 @@ app.post('/register', async(req, res) => {
             });
             await wait.save();
             // await Connection.db.db('collab').collection('login-credentials').insertOne({email: req.body.email, pass: req.body.password});
-            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
+            await org.updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id_w :id_string, name: req.body.name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {students: id_string}});
             //await Connection.db.db('collab').collection('users-coll').updateOne({email: req.body.email}, {$set: {id_p: id_string}});
             res.status(200).send('OK');
@@ -248,8 +249,8 @@ app.post('/org/:orgId/userapproval/:userId', async(req, res) => {
             const new_Wlist_u = removedSpecified(req.params.userId, org1.wlist_u);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_u: new_Wlist_u}});
             //await Connection.db.db('collab').collection('orgs').updateOne({id_o: req.body.org.toUpperCase()}, {$push: {wlist_u: {id :id_string, name: req.body.first_name, org: req.body.org , email: req.body.email, rollno: req.body.rollno, pass: req.body.password,approved:false}}});
-            await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id, name: get_org.wlist_u[get].name}}});
-            await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id}});
+            await org.updateOne({id_o: req.params.orgId}, {$push: {students: {id: get_org.wlist_u[get].id_w, name: get_org.wlist_u[get].name}}});
+            await user.updateOne({email: get_org.wlist_u[get].email}, {$set: {id_p: get_org.wlist_u[get].id_w}});
             res.status(200).send('OK');
         }
         else {
@@ -268,7 +269,7 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
     try{
         const approve = req.body.approve;
         const get_org = await org.findOne({id_o: req.params.orgId});
-        if(approve === true) {
+        if(approve.approve === true) {
             let get;
             for(let i = 0; i < get_org.wlist_p.length; i++) {
                 if(get_org.wlist_p[i].id === req.params.projId) {
@@ -277,7 +278,6 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 }
             }
             const NEW_PROJ = new addproj({
-                _id: new mongoose.Types.ObjectId(),
                 id_p: get_org.wlist_p[get].id,
                 title: get_org.wlist_p[get].title,
                 statement:  get_org.wlist_p[get].statement,
@@ -287,7 +287,7 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 tech: get_org.wlist_p[get].tech,
                 picture: get_org.wlist_p[get].picture,
                 category: get_org.wlist_p[get].category,
-                architecture_diagram: get_org.wlist_p[get].architecture_diagram,
+                documentation: get_org.wlist_p[get].documentation,
                 architecture_description: get_org.wlist_p[get].architecture_description,
                 sponsors: [],
                 video_url: get_org.wlist_p[get].video_url,
@@ -307,7 +307,7 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
             const org = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_p = removedSpecified(req.params.projId, org.wlist_p);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: new_Wlist_p}});
-            res.status(200).send('OK');
+            res.status(200).send('OK' );
         }
     }catch(err) {
         console.log(err);
@@ -319,7 +319,7 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
 
 app.get('/projects', async(req, res) => {
     try{
-        const projects = await addproj.find({}).toArray();
+        const projects = await addproj.find({});
         if(projects === null) {
             res.status(404).send('Not found');
         }
@@ -327,6 +327,7 @@ app.get('/projects', async(req, res) => {
             res.status(200).send(projects);
         }
     }catch(err) {
+        console.log(err);
         res.status(500).send('Internal server error');
     }
 })
@@ -471,12 +472,12 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
         // console.log(req)
         // console.log(req.body)
         // console.log(id)
-        const org = getorg(id);
+        const org1 = getorg(id);
         const rollno = getrollno(id);
         const user = await addproj.find();
         const proj_count = user.length + 1;
-        const id_c = org + '@' + rollno;
-        const id_p = org + '@' + rollno + '@' + proj_count;
+        const id_c = org1 + '@' + rollno;
+        const id_p = org1 + '@' + rollno + '@' + proj_count;
         const projects = await addproj.find();
         const images = [];
         const videos = [];
@@ -526,16 +527,16 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
 
         const result = check_plag({title: req.body.title, desc: req.body.description}, projects);
         if(!result) {
-            await org.updateOne({id_o: org},
+            await org.updateOne({id_o: org1},
                  {$push: {wlist_p: {id: id_p, 
                 title: req.body.title, 
                 statement: req.body.statement, 
                 description: req.body.description, 
-                org: org, category: req.body.category , 
+                org: org1, category: req.body.category , 
                 contributors: [...req.body.contributors, {id: id_c, name:user.name}]
                 , tech: req.body.tech,
                  picture: images[0],
-                 decumentation : pdf[0],
+                 documentation : pdf[0],
                    architecture_description: req.body.architecture_description, 
                    sponsors: [], 
                    video_url: videos[0], 
