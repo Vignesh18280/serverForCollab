@@ -17,7 +17,8 @@ const projSchema = new mongoose.Schema({
     insta: String,
     twitter: String, 
     github: String,
-    slack: String
+    slack: String,
+    category: String,
 })
 
 const addproj = mongoose.model('addproj', projSchema);

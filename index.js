@@ -324,15 +324,16 @@ app.post('/org/:orgId/:projId/approve', async(req, res) => {
                 insta: get_org.wlist_p[get].insta,
                 twitter: get_org.wlist_p[get].twitter,
                 github: get_org.wlist_p[get].github,
-                slack: get_org.wlist_p[get].slack
+                slack: get_org.wlist_p[get].slack,
+                category : get_org.wlist_p[get].category
             });
             console.log(get_org.wlist_p[get].id)
             console.log(getrollno(get_org.wlist_p[get].id))
             await NEW_PROJ.save();
-            await client.sAdd( 'Projects' , JSON.stringify(NEW_PROJ));
+            // await client.sAdd( 'Projects' , JSON.stringify(NEW_PROJ));
             const projectJSON = NEW_PROJ.id_p;
             // await client.hSet(`SingleProject:${projectJSON}`, NEW_PROJ);
-            await client.hSet(`SingleProject:${projectJSON}`, 'projectData', JSON.stringify(NEW_PROJ));
+            // await client.hSet(`SingleProject:${projectJSON}`, 'projectData', JSON.stringify(NEW_PROJ));
             const org1 = await org.findOne({id_o: req.params.orgId});
             const new_Wlist_p = removedSpecified(req.params.projId, org1.wlist_p);
             await org.updateOne({id_o: req.params.orgId}, {$set: {wlist_p: whatever}});
@@ -371,6 +372,17 @@ app.get('/projects', async(req, res) => {
     }catch(err) {
         console.log(err);
         res.status(500).send('Internal server error');
+    }
+})
+
+app.get('/projects/category/:cat_name' , async(req , res) => {
+    try {
+        const {cat_name} = req.params;
+        const projects = await addproj.find({category : cat_name});
+        res.status(200).json(projects);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json("Internal Server Error");
     }
 })
 
@@ -594,7 +606,8 @@ app.post('/user/:userId/addproj',upload.any() , async(req, res) => {
                    insta: req.body.insta, 
                    twitter: req.body.twitter,
                     github: req.body.github, 
-                    slack: req.body.slack
+                    slack: req.body.slack,
+                    category: req.body.category
                 }}
             });
             //await Connection.db.db('collab').collection('projects').insertOne(NEW_PROJ);
